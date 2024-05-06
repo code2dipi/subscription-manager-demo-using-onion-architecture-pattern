@@ -1,6 +1,7 @@
 package com.dipi.application;
 
 import com.dipi.domain.Subscription;
+import com.dipi.exception.SubscriptionServiceException;
 import com.dipi.infrastructure.email.EmailService;
 import com.dipi.infrastructure.persistence.SubscriptionRepository;
 import org.junit.Before;
@@ -28,7 +29,7 @@ public class SubscriptionServiceTest {
     }
 
     @Test
-    public void givenNewSubscription_whenSubscribe_thenSaveAndSendConfirmationEmail() {
+    public void givenNewSubscription_whenSubscribe_thenSaveAndSendConfirmationEmail() throws SubscriptionServiceException {
         // Given
         String email = "dipi@code2dipi.com";
         Subscription subscription = new Subscription(email, false);
@@ -74,7 +75,7 @@ public class SubscriptionServiceTest {
     public void givenAlreadyConfirmedSubscription_whenVerifySubscription_thenNoUpdate() {
         // Given
         String email = "alreadyconfirmed@code2dipi.com";
-        Subscription existingSubscription = new Subscription(email, true); // Subscription already confirmed
+        Subscription existingSubscription = new Subscription(email, true);
         when(mockSubscriptionRepository.findByEmail(email)).thenReturn(existingSubscription);
 
         // When
@@ -84,17 +85,22 @@ public class SubscriptionServiceTest {
         verify(mockSubscriptionRepository, never()).update(any());
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void givenEmptyOrNullEmail_whenSubscribe_thenThrowException() {
-        // Given
-        String email = "";
 
-        // When
-        subscriptionService.subscribe(email);
-    }
+   @Test(expected = SubscriptionServiceException.class)
+   public void givenEmptyOrNullEmail_whenSubscribe_thenThrowException() throws SubscriptionServiceException {
+       // Given
+       String email = "";
+
+       // When
+       subscriptionService.subscribe(email);
+
+       // Then
+       verify(mockSubscriptionRepository, never()).save(any(Subscription.class));
+       verify(mockEmailService, never()).sendConfirmationEmail(anyString());
+   }
 
     @Test
-    public void givenAlreadySubscribedEmail_whenSubscribe_thenNoDuplicateSubscription() {
+    public void givenAlreadySubscribedEmail_whenSubscribe_thenNoDuplicateSubscription() throws SubscriptionServiceException {
         // Given
         String email = "alreadysubscribed@code2dipi.com";
         Subscription existingSubscription = new Subscription(email, true);
